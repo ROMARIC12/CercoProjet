@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Mic, MicOff, Volume2, Loader2, X, AlertCircle, CheckCircle2, Sparkles, Phone } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -169,7 +169,7 @@ export function VoiceBookingFlow({
               <Mic className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold">Réservation vocale</h2>
+              <DialogTitle className="text-xl font-semibold">Réservation vocale</DialogTitle>
               <p className="text-sm text-primary-foreground/80">
                 Parlez, je vous écoute
               </p>
