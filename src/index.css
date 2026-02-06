@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+ * KôKô Santé Design System - Facebook Inspired
+ * Modern, Clean, and Social
+ */
+
+@layer base {
+  :root {
+    /* Facebook-like Palette */
+    --background: 210 20% 98%;
+    /* Light Gray #F0F2F5 */
+    --foreground: 214 20% 12%;
+    /* Dark Text */
+
+    --card: 0 0% 100%;
+    --card-foreground: 214 20% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 214 20% 12%;
+
+    /* Primary Blue #1877F2 */
+    --primary: 214 89% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Light Gray for hover/bg */
+    --secondary: 214 20% 93%;
+    /* #E4E6EB */
+    --secondary-foreground: 214 20% 12%;
+
+    --muted: 214 20% 93%;
+    --muted-foreground: 215 16% 47%;
+    /* #65676B */
+
+    --accent: 214 89% 52%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 93%;
+    /* #E4E6EB/CC */
+    --input: 214 20% 93%;
+    --ring: 214 89% 52%;
+
+    --radius: 0.75rem;
+    /* 12px for softer look */
+
+    /* Sidebar - White with subtle separation */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 16% 47%;
+    /* Muted text default */
+    --sidebar-primary: 214 89% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 20% 96%;
+    /* Very light blue/gray hover */
+    --sidebar-accent-foreground: 214 89% 52%;
+    /* Primary color on active */
+    --sidebar-border: 214 20% 93%;
+    --sidebar-ring: 214 89% 52%;
+  }
+
+  .dark {
+    --background: 220 15% 12%;
+    /* #18191A */
+    --foreground: 210 20% 98%;
+
+    --card: 220 15% 16%;
+    /* #242526 */
+    --card-foreground: 210 20% 98%;
+
+    --popover: 220 15% 16%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 214 89% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 22%;
+    /* #3A3B3C */
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 220 15% 22%;
+    --muted-foreground: 215 20% 70%;
+    /* #B0B3B8 */
+
+    --accent: 214 89% 52%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 24%;
+    /* #3E4042 */
+    --input: 220 15% 24%;
+    --ring: 214 89% 52%;
+
+    --sidebar-background: 220 15% 16%;
+    --sidebar-foreground: 215 20% 70%;
+    --sidebar-primary: 214 89% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 22%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 220 15% 24%;
+    --sidebar-ring: 214 89% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased overflow-x-hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .container-responsive {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .card-responsive {
+    @apply bg-card text-card-foreground rounded-xl border shadow-card transition-all duration-200 hover:shadow-soft;
+  }
+}
+
+
+@layer utilities {
+  .shadow-soft {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .shadow-card {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+}
