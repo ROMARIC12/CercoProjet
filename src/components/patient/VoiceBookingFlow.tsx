@@ -94,6 +94,7 @@ export function VoiceBookingFlow({
     startFlow,
     stopFlow,
     handlePaymentSuccess,
+    setError,
   } = useVoiceBookingFlow(
     patientId,
     (data) => {
@@ -127,6 +128,7 @@ export function VoiceBookingFlow({
       startFlow();
     } catch (err) {
       console.error('Microphone permission denied:', err);
+      setError('Accès au microphone refusé. Veuillez vérifier vos paramètres.');
     }
   };
 

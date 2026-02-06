@@ -250,7 +250,17 @@ export function useVoiceBookingFlow(
     try {
       // Try ElevenLabs STT first
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : '';
+
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -274,7 +284,8 @@ export function useVoiceBookingFlow(
           stream.getTracks().forEach(track => track.stop());
 
           try {
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const mimeType = mediaRecorder.mimeType || 'audio/webm';
+            const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
             const formData = new FormData();
             formData.append('audio', audioBlob, 'recording.webm');
 
@@ -949,10 +960,15 @@ export function useVoiceBookingFlow(
     });
   }, []);
 
+  const setError = useCallback((msg: string) => {
+    setState(prev => ({ ...prev, step: 'error', error: msg }));
+  }, []);
+
   return {
     ...state,
     startFlow,
     stopFlow,
     handlePaymentSuccess,
+    setError,
   };
 }
