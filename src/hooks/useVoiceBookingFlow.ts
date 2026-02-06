@@ -58,6 +58,7 @@ interface VoiceBookingFlowState {
   selectedSlot: AvailableSlot | null;
   consultationPrice: number;
   pendingAppointmentId: string | null;
+  logs: string[];
 }
 
 export function useVoiceBookingFlow(
@@ -86,7 +87,13 @@ export function useVoiceBookingFlow(
     selectedSlot: null,
     consultationPrice: 100, // Default price in FCFA
     pendingAppointmentId: null,
+    logs: [],
   });
+
+  const addLog = useCallback((msg: string) => {
+    console.log('[VoiceBookingFlow]', msg);
+    setState(prev => ({ ...prev, logs: [...prev.logs, `${new Date().toLocaleTimeString()} - ${msg}`] }));
+  }, []);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -95,6 +102,7 @@ export function useVoiceBookingFlow(
 
   // Text-to-Speech using ElevenLabs
   const speak = useCallback(async (text: string): Promise<void> => {
+    addLog(`Speaking: "${text.substring(0, 20)}..."`);
     if (abortedRef.current) return;
     setState(prev => ({ ...prev, isSpeaking: true }));
 
@@ -129,25 +137,33 @@ export function useVoiceBookingFlow(
         currentAudioRef.current = audio;
 
         audio.onended = () => {
+          addLog('Audio playback ended');
           setState(prev => ({ ...prev, isSpeaking: false }));
           resolve();
         };
 
-        audio.onerror = () => {
+        audio.onerror = (e) => {
+          addLog(`Audio playback error: ${e}`);
           setState(prev => ({ ...prev, isSpeaking: false }));
           reject(new Error('Audio playback failed'));
         };
 
-        audio.play().catch(reject);
+        audio.play().then(() => {
+          addLog('Audio playback started');
+        }).catch(e => {
+          addLog(`Audio play() failed: ${e}`);
+          reject(e);
+        });
       });
     } catch (error) {
-      console.error('[VoiceBookingFlow] TTS error:', error);
+      addLog(`TTS failed: ${error}, using fallback`);
       setState(prev => ({ ...prev, isSpeaking: false }));
 
       // Fallback to browser TTS
       return new Promise((resolve) => {
         if ('speechSynthesis' in window) {
           const speakFallback = () => {
+            addLog('Starting fallback TTS');
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'fr-FR';
             utterance.rate = 0.9;
@@ -157,9 +173,12 @@ export function useVoiceBookingFlow(
             const frVoice = voices.find(v => v.lang.startsWith('fr'));
             if (frVoice) utterance.voice = frVoice;
 
-            utterance.onend = () => resolve();
+            utterance.onend = () => {
+              addLog('Fallback TTS ended');
+              resolve();
+            };
             utterance.onerror = (e) => {
-              console.warn('[VoiceBookingFlow] Browser TTS error:', e);
+              addLog(`Fallback TTS error: ${e}`);
               resolve();
             };
             window.speechSynthesis.speak(utterance);
@@ -174,11 +193,12 @@ export function useVoiceBookingFlow(
             speakFallback();
           }
         } else {
+          addLog('No TTS support');
           resolve();
         }
       });
     }
-  }, []);
+  }, [addLog]);
 
   // Fallback STT using browser Web Speech API
   const browserSTT = useCallback((): Promise<string> => {
@@ -244,18 +264,23 @@ export function useVoiceBookingFlow(
 
   // Speech-to-Text with ElevenLabs + browser fallback
   const startListening = useCallback(async (): Promise<string> => {
+    addLog('Starting STT...');
     if (abortedRef.current) return '';
     setState(prev => ({ ...prev, isListening: true, transcript: '' }));
 
     try {
       // Try ElevenLabs STT first
+      addLog('Requesting getUserMedia...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      addLog('getUserMedia success');
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm')
         ? 'audio/webm'
         : MediaRecorder.isTypeSupported('audio/mp4')
           ? 'audio/mp4'
           : '';
+
+      addLog(`MediaRecorder mimeType: ${mimeType || 'default'}`);
 
       const mediaRecorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
@@ -271,6 +296,7 @@ export function useVoiceBookingFlow(
       };
 
       mediaRecorder.start();
+      addLog('Recording started');
       await new Promise(resolve => setTimeout(resolve, 5000));
 
       if (abortedRef.current) {
@@ -279,6 +305,8 @@ export function useVoiceBookingFlow(
         return '';
       }
 
+      addLog('Recording stopped, processing...');
+
       return new Promise((resolve) => {
         mediaRecorder.onstop = async () => {
           stream.getTracks().forEach(track => track.stop());
@@ -286,6 +314,7 @@ export function useVoiceBookingFlow(
           try {
             const mimeType = mediaRecorder.mimeType || 'audio/webm';
             const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+            addLog(`Audio blob size: ${audioBlob.size}`);
             const formData = new FormData();
             formData.append('audio', audioBlob, 'recording.webm');
 
@@ -307,10 +336,11 @@ export function useVoiceBookingFlow(
             if (data.error) throw new Error(data.error);
 
             const transcript = data.text || '';
+            addLog(`STT success: "${transcript}"`);
             setState(prev => ({ ...prev, isListening: false, transcript }));
             resolve(transcript);
           } catch (error) {
-            console.warn('[VoiceBookingFlow] ElevenLabs STT failed, using browser fallback:', error);
+            addLog(`STT failed: ${error}, using fallback`);
             // Fallback to browser Web Speech API
             try {
               const fallbackTranscript = await browserSTT();
@@ -326,7 +356,7 @@ export function useVoiceBookingFlow(
         mediaRecorder.stop();
       });
     } catch (error) {
-      console.warn('[VoiceBookingFlow] MediaRecorder failed, falling back to browser STT');
+      addLog(`MediaRecorder failed: ${error}, using fallback`);
       // Fallback: use browser Web Speech API directly
       try {
         const transcript = await browserSTT();
@@ -337,7 +367,7 @@ export function useVoiceBookingFlow(
         return '';
       }
     }
-  }, [browserSTT]);
+  }, [browserSTT, addLog]);
 
   // Fetch clinics from database
   const fetchClinics = useCallback(async (): Promise<Clinic[]> => {
@@ -633,24 +663,34 @@ export function useVoiceBookingFlow(
 
   // Main voice booking flow
   const startFlow = useCallback(async () => {
+    addLog('startFlow called');
+
     // Mobile Audio Context Unlock (iOS/Android)
-    // Create a short silent buffer to unlock the audio capabilities on user interaction
     try {
       const AudioContext = (window.AudioContext || (window as any).webkitAudioContext);
       if (AudioContext) {
+        addLog('Creating AudioContext for unlock...');
         const ctx = new AudioContext();
         const buffer = ctx.createBuffer(1, 1, 22050);
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.connect(ctx.destination);
         source.start(0);
-        await new Promise(r => setTimeout(r, 10)); // tiny delay
+        addLog('AudioContext unlock attempted');
+
+        // Resume if suspended
+        if (ctx.state === 'suspended') {
+          addLog('Resuming suspended AudioContext...');
+          await ctx.resume();
+        }
+        await new Promise(r => setTimeout(r, 10));
       }
     } catch (e) {
-      console.warn('[VoiceBookingFlow] Audio unlock failed:', e);
+      addLog(`Audio unlock failed: ${e}`);
     }
 
     if (!patientId) {
+      addLog('Error: No patientId');
       setState(prev => ({ ...prev, error: 'Patient non identifié' }));
       return;
     }
@@ -957,6 +997,7 @@ export function useVoiceBookingFlow(
       selectedSlot: null,
       consultationPrice: 100,
       pendingAppointmentId: null,
+      logs: [],
     });
   }, []);
 

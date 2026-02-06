@@ -95,6 +95,7 @@ export function VoiceBookingFlow({
     stopFlow,
     handlePaymentSuccess,
     setError,
+    logs,
   } = useVoiceBookingFlow(
     patientId,
     (data) => {
@@ -123,6 +124,31 @@ export function VoiceBookingFlow({
 
   const handleStart = async () => {
     try {
+      // --- SUPER UNLOCK FOR MOBILE ---
+      // 1. Silent HTML Audio Unlock
+      const silentAudio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////wAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+      silentAudio.play().catch(e => console.log("Silent audio play failed", e));
+
+      // 2. Web Audio Context Unlock
+      const AudioContext = (window.AudioContext || (window as any).webkitAudioContext);
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        await ctx.resume();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+      }
+
+      // 3. Speech Synthesis Unlock
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance('');
+        utterance.volume = 0;
+        window.speechSynthesis.speak(utterance);
+      }
+      // -------------------------------
+
       // Request microphone permission first
       await navigator.mediaDevices.getUserMedia({ audio: true });
       startFlow();
@@ -396,6 +422,14 @@ export function VoiceBookingFlow({
               </div>
             </>
           )}
+        </div>
+        {/* Debug Logs */}
+        <div className="mt-4 p-2 bg-gray-100 rounded text-xs h-32 overflow-y-auto font-mono">
+          <p className="font-bold mb-1">Debug Logs:</p>
+          {logs.map((log, i) => (
+            <div key={i} className="border-b border-gray-200 py-1">{log}</div>
+          ))}
+          {logs.length === 0 && <div className="text-gray-400">Waiting to start...</div>}
         </div>
       </DialogContent>
     </Dialog>
