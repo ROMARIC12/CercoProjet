@@ -147,12 +147,32 @@ export function useVoiceBookingFlow(
       // Fallback to browser TTS
       return new Promise((resolve) => {
         if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = 'fr-FR';
-          utterance.rate = 0.9;
-          utterance.onend = () => resolve();
-          utterance.onerror = () => resolve();
-          window.speechSynthesis.speak(utterance);
+          const speakFallback = () => {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'fr-FR';
+            utterance.rate = 0.9;
+
+            // Try to select a French voice specifically
+            const voices = window.speechSynthesis.getVoices();
+            const frVoice = voices.find(v => v.lang.startsWith('fr'));
+            if (frVoice) utterance.voice = frVoice;
+
+            utterance.onend = () => resolve();
+            utterance.onerror = (e) => {
+              console.warn('[VoiceBookingFlow] Browser TTS error:', e);
+              resolve();
+            };
+            window.speechSynthesis.speak(utterance);
+          };
+
+          if (window.speechSynthesis.getVoices().length === 0) {
+            window.speechSynthesis.onvoiceschanged = () => {
+              window.speechSynthesis.onvoiceschanged = null;
+              speakFallback();
+            };
+          } else {
+            speakFallback();
+          }
         } else {
           resolve();
         }
@@ -602,6 +622,23 @@ export function useVoiceBookingFlow(
 
   // Main voice booking flow
   const startFlow = useCallback(async () => {
+    // Mobile Audio Context Unlock (iOS/Android)
+    // Create a short silent buffer to unlock the audio capabilities on user interaction
+    try {
+      const AudioContext = (window.AudioContext || (window as any).webkitAudioContext);
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+        await new Promise(r => setTimeout(r, 10)); // tiny delay
+      }
+    } catch (e) {
+      console.warn('[VoiceBookingFlow] Audio unlock failed:', e);
+    }
+
     if (!patientId) {
       setState(prev => ({ ...prev, error: 'Patient non identifié' }));
       return;

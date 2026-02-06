@@ -135,16 +135,7 @@ export function VoiceBookingFlow({
     await handlePaymentSuccess();
   };
 
-  // Auto-start when opened
-  useEffect(() => {
-    if (open && step === 'idle') {
-      // Small delay to ensure dialog is visible
-      const timer = setTimeout(() => {
-        handleStart();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [open, step]);
+
 
   const isActive = step !== 'idle' && step !== 'done' && step !== 'error';
   const progress = stepProgress[step];
